@@ -71,15 +71,18 @@ impl DataDumper {
         writeln!(f, "data_{stem}")?;
         writeln!(f, "#")?;
 
-        // ── _atom_site loop ─────────────────────────────────────────
+        // ── _atom_site loop (fields required by BioPython MMCIFParser) ──
         writeln!(f, "loop_")?;
         writeln!(f, "_atom_site.group_PDB")?;
         writeln!(f, "_atom_site.id")?;
         writeln!(f, "_atom_site.type_symbol")?;
         writeln!(f, "_atom_site.label_atom_id")?;
+        writeln!(f, "_atom_site.label_alt_id")?;
         writeln!(f, "_atom_site.label_comp_id")?;
         writeln!(f, "_atom_site.label_asym_id")?;
+        writeln!(f, "_atom_site.label_entity_id")?;
         writeln!(f, "_atom_site.label_seq_id")?;
+        writeln!(f, "_atom_site.pdbx_PDB_ins_code")?;
         writeln!(f, "_atom_site.auth_asym_id")?;
         writeln!(f, "_atom_site.auth_seq_id")?;
         writeln!(f, "_atom_site.Cartn_x")?;
@@ -105,8 +108,8 @@ impl DataDumper {
 
             writeln!(
                 f,
-                "{group:<6}{serial:>5} {element:<2} {atom_name:<4} {comp_id:<3} \
-                 {asym_id:<2} {seq_id:>4} {asym_id:<2} {seq_id:>4} \
+                "{group:<6}{serial:>5} {element:<2} {atom_name:<4} . {comp_id:<3} \
+                 {asym_id:<2} 1 {seq_id:>4} ? {asym_id:<2} {seq_id:>4} \
                  {x:>8.3} {y:>8.3} {z:>8.3} {occ:>6.2} {b:>6.2} 1",
             )?;
         }
