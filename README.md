@@ -1,18 +1,11 @@
 <div align="center">
 
-```
-                 ╔══════════════════════════════════════════════════╗
-                 ║                                                  ║
-                 ║    ⚡  C A T T L E - P R O D  ⚡                ║
-                 ║                                                  ║
-                 ║    Biomolecular Structure Prediction Engine       ║
-                 ║    Rewritten in Rust for Speed & Safety          ║
-                 ║                                                  ║
-                 ╚══════════════════════════════════════════════════╝
-```
+# Cattle-Prod
 
-**High-performance protein structure prediction for therapeutic discovery.**<br>
-*Drop-in replacement for Protenix. Built for the [CASCADE](https://github.com/twaite11/CASCADE-Cas-Collateral-Activation-Discovery-Engineering) pipeline.*
+**Biomolecular structure prediction engine — rewritten in Rust.**
+
+High-performance protein structure prediction for therapeutic discovery.<br>
+Drop-in replacement for Protenix. Built for the [CASCADE](https://github.com/twaite11/CASCADE-Cas-Collateral-Activation-Discovery-Engineering) pipeline.
 
 ---
 
