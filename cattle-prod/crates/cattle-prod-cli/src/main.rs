@@ -26,37 +26,36 @@ enum Commands {
     Pred {
         #[arg(short, long)]
         input: String,
-        #[arg(short, long, default_value = "./output")]
+        #[arg(short, long = "out_dir", alias = "out-dir", default_value = "./output")]
         out_dir: String,
-        #[arg(short = 'n', long, default_value = "cattle_prod_base_default_v1.0.0")]
+        #[arg(short = 'n', long = "model_name", alias = "model-name", default_value = "cattle_prod_base_default_v1.0.0")]
         model_name: String,
         #[arg(long, value_delimiter = ',', default_values_t = vec![101])]
         seeds: Vec<u64>,
-        #[arg(long, default_value_t = 200)]
+        #[arg(long = "n_step", alias = "n-step", default_value_t = 200)]
         n_step: usize,
-        #[arg(long, default_value_t = 5)]
+        #[arg(long = "n_sample", alias = "n-sample", default_value_t = 5)]
         n_sample: usize,
-        #[arg(long, default_value_t = 10)]
+        #[arg(long = "n_cycle", alias = "n-cycle", default_value_t = 10)]
         n_cycle: usize,
         #[arg(long, default_value = "bf16")]
         dtype: String,
         #[arg(long)]
         checkpoint: Option<String>,
-        #[arg(long, default_value_t = true)]
+        #[arg(long = "use_msa", alias = "use-msa", default_value_t = true, action = clap::ArgAction::Set)]
         use_msa: bool,
-        #[arg(long, default_value_t = false)]
+        #[arg(long = "use_template", alias = "use-template", default_value_t = false, action = clap::ArgAction::Set)]
         use_template: bool,
-        /// Accepted for Protenix CLI compatibility (always uses default params)
-        #[arg(long, default_value_t = true, hide = true)]
+        #[arg(long = "use_default_params", alias = "use-default-params", default_value_t = true, hide = true, action = clap::ArgAction::Set)]
         use_default_params: bool,
     },
     /// Run MSA search (alignment databases)
     Msa {
         #[arg(long)]
         input: String,
-        #[arg(long, default_value = "./msa_output")]
+        #[arg(long = "out_dir", alias = "out-dir", default_value = "./msa_output")]
         out_dir: String,
-        #[arg(long)]
+        #[arg(long = "db_dir", alias = "db-dir")]
         db_dir: Option<String>,
     },
     /// Convert PyTorch checkpoint to safetensors
