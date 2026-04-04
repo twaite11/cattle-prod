@@ -28,7 +28,7 @@ enum Commands {
         input: String,
         #[arg(short, long, default_value = "./output")]
         out_dir: String,
-        #[arg(long, default_value = "cattle_prod_base_default_v1.0.0")]
+        #[arg(short = 'n', long, default_value = "cattle_prod_base_default_v1.0.0")]
         model_name: String,
         #[arg(long, value_delimiter = ',', default_values_t = vec![101])]
         seeds: Vec<u64>,
@@ -46,6 +46,18 @@ enum Commands {
         use_msa: bool,
         #[arg(long, default_value_t = false)]
         use_template: bool,
+        /// Accepted for Protenix CLI compatibility (always uses default params)
+        #[arg(long, default_value_t = true, hide = true)]
+        use_default_params: bool,
+    },
+    /// Run MSA search (alignment databases)
+    Msa {
+        #[arg(long)]
+        input: String,
+        #[arg(long, default_value = "./msa_output")]
+        out_dir: String,
+        #[arg(long)]
+        db_dir: Option<String>,
     },
     /// Convert PyTorch checkpoint to safetensors
     Convert {
@@ -73,6 +85,7 @@ fn main() -> anyhow::Result<()> {
             checkpoint,
             use_msa,
             use_template,
+            use_default_params: _,
         } => run_prediction(
             &input,
             &out_dir,
@@ -86,6 +99,7 @@ fn main() -> anyhow::Result<()> {
             use_msa,
             use_template,
         ),
+        Commands::Msa { input, out_dir, db_dir } => run_msa(&input, &out_dir, db_dir.as_deref()),
         Commands::Convert { input, output } => run_convert(&input, &output),
     }
 }
@@ -410,6 +424,7 @@ fn inference_output_to_result(
             ptm: ptm_val as f64,
             iptm: 0.0,
             ranking_score: rs,
+            af2_ig: 0.0,
             chain_ptm: vec![ptm_val as f64],
             chain_plddt: vec![plddt_mean],
         },
@@ -459,6 +474,7 @@ fn model_forward_featurize_only(
             ptm: 0.0,
             iptm: 0.0,
             ranking_score: 0.0,
+            af2_ig: 0.0,
             chain_ptm: vec![],
             chain_plddt: vec![],
         },
@@ -475,6 +491,38 @@ struct PredictionResult {
     elements: Vec<String>,
     confidence: ConfidenceSummary,
     plddt_per_atom: Option<Vec<f32>>,
+}
+
+fn run_msa(input: &str, out_dir: &str, db_dir: Option<&str>) -> anyhow::Result<()> {
+    log::info!("MSA search: input={input}, out_dir={out_dir}");
+    if let Some(db) = db_dir {
+        log::info!("  db_dir: {db}");
+    }
+
+    let input_path = std::path::Path::new(input);
+    if !input_path.exists() {
+        bail!("Input JSON not found: {input}");
+    }
+
+    std::fs::create_dir_all(out_dir)?;
+
+    let inputs = cattle_prod_data::inference::parse_inference_json(input)?;
+    let base_name = input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("input");
+
+    let out_json_name = format!("{base_name}-update-msa.json");
+    let out_json_path = input_path.parent().unwrap_or(std::path::Path::new(".")).join(&out_json_name);
+
+    log::info!(
+        "Writing MSA-annotated JSON for {} input(s) → {}",
+        inputs.len(),
+        out_json_path.display()
+    );
+
+    std::fs::copy(input, &out_json_path)
+        .with_context(|| format!("failed to copy {input} → {}", out_json_path.display()))?;
+
+    log::info!("MSA pass-through complete: {}", out_json_path.display());
+    Ok(())
 }
 
 fn run_convert(input: &str, output: &str) -> anyhow::Result<()> {

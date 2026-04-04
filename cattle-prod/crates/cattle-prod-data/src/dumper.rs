@@ -10,6 +10,7 @@ pub struct ConfidenceSummary {
     pub ptm: f64,
     pub iptm: f64,
     pub ranking_score: f64,
+    pub af2_ig: f64,
     pub chain_ptm: Vec<f64>,
     pub chain_plddt: Vec<f64>,
 }
@@ -191,8 +192,8 @@ impl DataDumper {
             &cif_path,
         )?;
 
-        // ── Confidence summary ──────────────────────────────────────
-        let conf_path = sample_dir.join(format!("{prefix}_confidence.json"));
+        // ── Confidence summary (named *_summary_confidence.json for CASCADE compat) ──
+        let conf_path = sample_dir.join(format!("{prefix}_summary_confidence.json"));
         self.write_confidence_json(confidence, &conf_path)?;
 
         // ── Per-atom pLDDT (optional) ───────────────────────────────
@@ -259,6 +260,7 @@ mod tests {
             ptm: 0.85,
             iptm: 0.78,
             ranking_score: 0.81,
+            af2_ig: 0.0,
             chain_ptm: vec![0.85],
             chain_plddt: vec![72.5],
         };
@@ -290,6 +292,7 @@ mod tests {
             ptm: 0.9,
             iptm: 0.8,
             ranking_score: 0.85,
+            af2_ig: 0.0,
             chain_ptm: vec![0.9],
             chain_plddt: vec![80.0],
         };
@@ -300,7 +303,7 @@ mod tests {
 
         assert!(result.exists());
         assert!(result.join("rank_000_prediction.cif").exists());
-        assert!(result.join("rank_000_confidence.json").exists());
+        assert!(result.join("rank_000_summary_confidence.json").exists());
         assert!(result.join("rank_000_plddt.json").exists());
 
         let _ = fs::remove_dir_all(&dir);

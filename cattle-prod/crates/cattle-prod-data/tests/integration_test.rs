@@ -466,6 +466,7 @@ fn dumper_confidence_json_roundtrip() {
         ptm: 0.92,
         iptm: 0.88,
         ranking_score: 0.90,
+        af2_ig: 0.0,
         chain_ptm: vec![0.92],
         chain_plddt: vec![85.0],
     };
@@ -501,6 +502,7 @@ fn dumper_full_dump_creates_tree() {
         ptm: 0.9,
         iptm: 0.85,
         ranking_score: 0.87,
+        af2_ig: 0.0,
         chain_ptm: vec![0.9],
         chain_plddt: vec![77.5],
     };
@@ -511,7 +513,7 @@ fn dumper_full_dump_creates_tree() {
 
     assert!(sample_dir.exists());
     assert!(sample_dir.join("rank_000_prediction.cif").exists());
-    assert!(sample_dir.join("rank_000_confidence.json").exists());
+    assert!(sample_dir.join("rank_000_summary_confidence.json").exists());
     assert!(sample_dir.join("rank_000_plddt.json").exists());
 
     let cif_content = std::fs::read_to_string(sample_dir.join("rank_000_prediction.cif")).unwrap();
