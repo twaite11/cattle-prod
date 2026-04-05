@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
+use std::{env, fs};
 
 use anyhow::{bail, Context};
 use candle_core::{DType, Device, Tensor};
@@ -68,6 +69,15 @@ enum Commands {
         #[arg(long)]
         output: String,
     },
+    /// Verify checkpoint compatibility without full inference.
+    VerifyCheckpoint {
+        #[arg(long)]
+        checkpoint: String,
+        #[arg(short = 'n', long = "model_name", default_value = "cattle_prod_base_default_v1.0.0")]
+        model_name: String,
+        #[arg(long, default_value = "bf16")]
+        dtype: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -105,6 +115,11 @@ fn main() -> anyhow::Result<()> {
         ),
         Commands::Msa { input, out_dir, db_dir } => run_msa(&input, &out_dir, db_dir.as_deref()),
         Commands::Convert { input, output } => run_convert(&input, &output),
+        Commands::VerifyCheckpoint {
+            checkpoint,
+            model_name,
+            dtype,
+        } => run_verify_checkpoint(&checkpoint, &model_name, &dtype),
     }
 }
 
@@ -577,4 +592,66 @@ fn run_convert(input: &str, output: &str) -> anyhow::Result<()> {
             bail!("Unsupported checkpoint format: .{ext}. Expected .pt, .pth, or .safetensors")
         }
     }
+}
+
+fn run_verify_checkpoint(checkpoint: &str, model_name: &str, dtype: &str) -> anyhow::Result<()> {
+    let candle_dtype = parse_dtype(dtype)?;
+    let device = select_device();
+    let ckpt_dir = PathBuf::from(checkpoint);
+    let st_path = ckpt_dir.join("model.safetensors");
+
+    if !st_path.exists() {
+        bail!(
+            "checkpoint missing model.safetensors: {}",
+            st_path.display()
+        );
+    }
+
+    let map_ver = env::var("CATTLE_PROD_MAPPING_VERSION").unwrap_or_else(|_| "unknown".to_string());
+    log::info!("Checkpoint verify");
+    log::info!("  checkpoint: {}", ckpt_dir.display());
+    log::info!("  model_name: {model_name}");
+    log::info!("  dtype: {dtype}");
+    log::info!("  mapping_version: {map_ver}");
+
+    let config = CattleProdConfig {
+        model_name: model_name.to_string(),
+        load_checkpoint_dir: ckpt_dir.clone(),
+        dtype: dtype.to_string(),
+        ..Default::default()
+    };
+
+    // Print the first N tensor keys to aid debugging mismatches.
+    let data = fs::read(&st_path)?;
+    let safes = safetensors::SafeTensors::deserialize(&data)?;
+    let mut keys: Vec<String> = safes.names().iter().map(|s| (*s).to_string()).collect();
+    keys.sort_unstable();
+    log::info!("  tensor_count: {}", keys.len());
+    for k in keys.iter().take(20) {
+        log::info!("  tensor_key: {k}");
+    }
+
+    match CattleProd::load_weights(&config.model, &st_path, &device, candle_dtype) {
+        Ok(_) => {
+            println!("verify-checkpoint: OK");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("verify-checkpoint: FAILED");
+            eprintln!("  error: {e:#}");
+            if let Some(missing) = extract_missing_tensor_key(&format!("{e:#}")) {
+                eprintln!("  missing_tensor: {missing}");
+            }
+            bail!("checkpoint verification failed")
+        }
+    }
+}
+
+fn extract_missing_tensor_key(msg: &str) -> Option<String> {
+    // Candle error format usually includes TensorNotFound(\"<key>\")
+    let marker = "TensorNotFound(\"";
+    let start = msg.find(marker)?;
+    let rest = &msg[start + marker.len()..];
+    let end = rest.find("\")")?;
+    Some(rest[..end].to_string())
 }

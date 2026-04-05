@@ -147,9 +147,29 @@ cattle-prod pred -i input.json -o ./output --checkpoint ./weights/
 # Protenix .pt checkpoints → safetensors (requires Python + torch)
 python scripts/convert_weights.py model.pt -o model.safetensors
 
+# Diagnose key mapping before writing (recommended on new checkpoints)
+python scripts/convert_weights.py model.pt \
+  --diagnose_only \
+  --diagnostic_report ./checkpoint_diagnostic.json \
+  --mapping_version v1
+
 # Already safetensors? Just copy:
 cattle-prod convert --input model.safetensors --output ./weights/model.safetensors
+
+# Verify checkpoint can be loaded by cattle-prod model code
+cattle-prod verify-checkpoint \
+  --checkpoint ./weights \
+  -n cattle_prod_base_default_v1.0.0
 ```
+
+Supported checkpoint profiles (current mapping ruleset):
+
+| Profile | Model name | Mapping version |
+|---|---|---|
+| `v0.5.0-mini` | `cattle_prod_mini_default_v0.5.0` | `v1` |
+| `v0.5.0-base` | `cattle_prod_base_default_v0.5.0` | `v1` |
+| `v1.0.0-base` | `cattle_prod_base_default_v1.0.0` | `v1` |
+| `v1.0.0-20250630-base` | `cattle_prod_base_default_v1.0.0_20250630` | `v1` |
 
 ### Input format
 

@@ -190,6 +190,7 @@ dependencies = [
  "half",
  "log",
  "ndarray",
+ "safetensors",
  "serde",
  "serde_json",
  "serde_yaml",
