@@ -42,6 +42,9 @@ enum Commands {
         dtype: String,
         #[arg(long)]
         checkpoint: Option<String>,
+        /// If true, allows featurize-only execution without checkpoint.
+        #[arg(long = "allow_featurize_only", alias = "allow-featurize-only", default_value_t = false, hide = true, action = clap::ArgAction::Set)]
+        allow_featurize_only: bool,
         #[arg(long = "use_msa", alias = "use-msa", default_value_t = true, action = clap::ArgAction::Set)]
         use_msa: bool,
         #[arg(long = "use_template", alias = "use-template", default_value_t = false, action = clap::ArgAction::Set)]
@@ -82,6 +85,7 @@ fn main() -> anyhow::Result<()> {
             n_cycle,
             dtype,
             checkpoint,
+            allow_featurize_only,
             use_msa,
             use_template,
             use_default_params: _,
@@ -95,6 +99,7 @@ fn main() -> anyhow::Result<()> {
             n_cycle,
             &dtype,
             checkpoint.as_deref(),
+            allow_featurize_only,
             use_msa,
             use_template,
         ),
@@ -145,6 +150,7 @@ fn run_prediction(
     n_cycle: usize,
     dtype: &str,
     checkpoint: Option<&str>,
+    allow_featurize_only: bool,
     use_msa: bool,
     use_template: bool,
 ) -> anyhow::Result<()> {
@@ -201,7 +207,7 @@ fn run_prediction(
     );
 
     // ── 2. Load model weights ───────────────────────────────────────
-    let model = load_model(&config, &device, candle_dtype)?;
+    let model = load_model(&config, &device, candle_dtype, allow_featurize_only)?;
 
     // ── 3. Iterate over inputs × seeds × samples ───────────────────
     for (input_idx, inf_input) in inputs.iter().enumerate() {
@@ -270,11 +276,19 @@ fn load_model(
     config: &CattleProdConfig,
     device: &Device,
     dtype: DType,
+    allow_featurize_only: bool,
 ) -> anyhow::Result<Option<CattleProd>> {
     let ckpt_dir = &config.load_checkpoint_dir;
     if ckpt_dir.as_os_str().is_empty() {
-        log::warn!("No checkpoint specified -- running in featurize-only mode");
-        return Ok(None);
+        if allow_featurize_only {
+            log::warn!("No checkpoint specified -- running in featurize-only mode (--allow_featurize_only=true)");
+            return Ok(None);
+        }
+        bail!(
+            "No checkpoint specified. Refusing silent featurize-only mode. \
+             Pass --checkpoint <dir_with_model.safetensors> (recommended), \
+             or explicitly opt into featurize-only with --allow_featurize_only true."
+        );
     }
 
     let safetensors_path = ckpt_dir.join("model.safetensors");
